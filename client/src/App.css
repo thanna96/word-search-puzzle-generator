@@ -1,42 +1,166 @@
 #root {
-  max-width: 1280px;
+  max-width: 960px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2.5rem 1.5rem 3rem;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.app__header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.app__header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+}
+
+.app__header p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 1.05rem;
+}
+
+.app__controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.app__controls button {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.65rem 1.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
+}
+
+.app__controls button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(29, 78, 216, 0.3);
+}
+
+.app__controls button:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 12px rgba(29, 78, 216, 0.2);
+}
+
+.app__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .app__content {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+  }
+}
+
+.puzzle {
+  border: 3px solid rgba(37, 99, 235, 0.35);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 15px 30px rgba(15, 23, 42, 0.1);
+}
+
+.puzzle__row {
+  display: flex;
+}
+
+.puzzle__cell {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0.2rem;
+  border-radius: 0.75rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1f2937;
+  background: rgba(241, 245, 249, 0.95);
+  user-select: none;
+  touch-action: none;
+  transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+
+.puzzle__cell:hover {
+  transform: translateY(-2px);
+}
+
+.puzzle__cell--highlighted {
+  background: #fde68a;
+}
+
+.puzzle__cell--found {
+  background: #34d399;
+  color: #0f172a;
+}
+
+.puzzle__cell--found.puzzle__cell--highlighted {
+  background: #bbf7d0;
+}
+
+.word-list {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  box-shadow: 0 15px 30px rgba(15, 23, 42, 0.08);
+  min-width: 220px;
+}
+
+.word-list h2 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.4rem;
+  color: #1e293b;
+}
+
+.word-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.word-list__item {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #334155;
+  text-transform: uppercase;
+}
+
+.word-list__item--found {
+  color: #16a34a;
+  text-decoration: line-through;
+}
+
+.word-list__status {
+  margin-top: 1.25rem;
+  font-weight: 500;
+  color: #2563eb;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+.puzzle__cell:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.7);
+  outline-offset: 2px;
 }
