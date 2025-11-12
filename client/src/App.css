@@ -164,3 +164,24 @@
   outline: 3px solid rgba(37, 99, 235, 0.7);
   outline-offset: 2px;
 }
+
+.app__status {
+  text-align: center;
+  font-weight: 500;
+  color: #2563eb;
+}
+
+.app__status--error {
+  color: #dc2626;
+}
+
+.app__status + .app__status {
+  margin-top: -1rem;
+}
+
+.app__controls button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 6px 12px rgba(29, 78, 216, 0.15);
+}

@@ -2,25 +2,49 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 
 import type { Position, Puzzle } from '../types/puzzle'
-import { BASE_SIZE, WORD_BANK, computeLineCells, createPuzzle } from '../utils/puzzleGenerator'
+import { computeLineCells } from '../utils/puzzleGenerator'
+import { requestPuzzle, solvePuzzleRequest } from '../utils/api'
 
 type PointerFactory = (row: number, col: number) => (event: ReactPointerEvent<HTMLDivElement>) => void
 
 type PointerHandler = (event: ReactPointerEvent<HTMLDivElement>) => void
 
+type LoadOptions = {
+    words?: string[]
+    wordCount?: number
+}
+
+const EMPTY_PUZZLE: Puzzle = {
+    grid: [],
+    placements: {},
+}
+
 export function useWordSearch() {
-    const [puzzle, setPuzzle] = useState<Puzzle>(() => createPuzzle(WORD_BANK, BASE_SIZE))
+    const [puzzle, setPuzzle] = useState<Puzzle>(EMPTY_PUZZLE)
+    const [wordBank, setWordBank] = useState<string[]>([])
     const [foundWords, setFoundWords] = useState<Set<string>>(new Set())
     const [selectedCells, setSelectedCells] = useState<Position[]>([])
     const [isSelecting, setIsSelecting] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+    const [hasLoaded, setHasLoaded] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     const startCellRef = useRef<Position | null>(null)
     const activePointerRef = useRef<number | null>(null)
     const selectionRef = useRef<Position[]>([])
+    const wordCountRef = useRef<number | undefined>(undefined)
 
     useEffect(() => {
         selectionRef.current = selectedCells
     }, [selectedCells])
+
+    const resetSelection = useCallback(() => {
+        activePointerRef.current = null
+        startCellRef.current = null
+        selectionRef.current = []
+        setSelectedCells([])
+        setIsSelecting(false)
+    }, [])
 
     const foundCellSet = useMemo(() => {
         const cells = new Set<string>()
@@ -43,7 +67,7 @@ export function useWordSearch() {
                 return null
             }
 
-            const matchesPath = (target: Position[], candidate: Position[]) => {
+            const matchesPath = (target: Position[] | undefined, candidate: Position[]) => {
                 if (!target || target.length !== candidate.length) {
                     return false
                 }
@@ -53,7 +77,7 @@ export function useWordSearch() {
                 })
             }
 
-            for (const word of WORD_BANK) {
+            for (const word of wordBank) {
                 const placement = puzzle.placements[word]
                 if (!placement) {
                     continue
@@ -68,7 +92,7 @@ export function useWordSearch() {
             }
             return null
         },
-        [puzzle],
+        [puzzle, wordBank],
     )
 
     const finalizeSelection = useCallback(() => {
@@ -87,12 +111,8 @@ export function useWordSearch() {
             }
         }
 
-        activePointerRef.current = null
-        startCellRef.current = null
-        selectionRef.current = []
-        setSelectedCells([])
-        setIsSelecting(false)
-    }, [findMatchingWord])
+        resetSelection()
+    }, [findMatchingWord, resetSelection])
 
     useEffect(() => {
         const handlePointerUp = (event: PointerEvent) => {
@@ -118,6 +138,9 @@ export function useWordSearch() {
 
     const handlePointerDown: PointerFactory = useCallback((row, col) => {
         return (event) => {
+            if (isLoading || puzzle.grid.length === 0) {
+                return
+            }
             event.preventDefault()
             activePointerRef.current = event.pointerId
             const start = { row, col }
@@ -126,7 +149,7 @@ export function useWordSearch() {
             setSelectedCells([start])
             setIsSelecting(true)
         }
-    }, [])
+    }, [isLoading, puzzle.grid.length])
 
     const handlePointerEnter: PointerFactory = useCallback((row, col) => {
         return (event) => {
@@ -154,35 +177,75 @@ export function useWordSearch() {
         [finalizeSelection],
     )
 
+    const loadPuzzle = useCallback(
+        async (options?: LoadOptions) => {
+            setIsLoading(true)
+            setError(null)
+            try {
+                const desiredWordCount = options?.wordCount ?? wordCountRef.current
+                const response = await requestPuzzle(desiredWordCount, options?.words)
+                setPuzzle(response.puzzle)
+                setWordBank(response.words)
+                setFoundWords(new Set())
+                wordCountRef.current = response.words.length
+                resetSelection()
+                setHasLoaded(true)
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'Unable to generate puzzle.'
+                setError(message)
+            } finally {
+                setIsLoading(false)
+            }
+        },
+        [resetSelection],
+    )
+
     const handleGeneratePuzzle = useCallback(() => {
-        const nextPuzzle = createPuzzle(WORD_BANK, BASE_SIZE)
-        setPuzzle(nextPuzzle)
-        setFoundWords(new Set())
-        setSelectedCells([])
-        setIsSelecting(false)
-        startCellRef.current = null
-        activePointerRef.current = null
-        selectionRef.current = []
-    }, [])
+        void loadPuzzle()
+    }, [loadPuzzle])
+
+    const executeSolve = useCallback(async () => {
+        if (puzzle.grid.length === 0 || wordBank.length === 0) {
+            return
+        }
+        setIsLoading(true)
+        setError(null)
+        try {
+            const response = await solvePuzzleRequest(puzzle.grid, wordBank)
+            setPuzzle((prev) => ({
+                ...prev,
+                placements: { ...prev.placements, ...response.placements },
+            }))
+            setFoundWords(new Set(wordBank))
+            resetSelection()
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Unable to solve puzzle.'
+            setError(message)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [puzzle.grid, resetSelection, wordBank])
 
     const handleSolvePuzzle = useCallback(() => {
-        setFoundWords(new Set(WORD_BANK))
-        setSelectedCells([])
-        setIsSelecting(false)
-        selectionRef.current = []
-        startCellRef.current = null
-        activePointerRef.current = null
-    }, [])
+        void executeSolve()
+    }, [executeSolve])
 
-    const allFound = foundWords.size === WORD_BANK.length
+    useEffect(() => {
+        void loadPuzzle()
+    }, [loadPuzzle])
+
+    const allFound = wordBank.length > 0 && foundWords.size === wordBank.length
 
     return {
         puzzle,
-        wordBank: WORD_BANK,
+        wordBank,
         foundWords,
         foundCellSet,
         selectionKeySet,
         isSelecting,
+        isLoading,
+        hasLoaded,
+        error,
         allFound,
         handleGeneratePuzzle,
         handleSolvePuzzle,
